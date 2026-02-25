@@ -12,6 +12,8 @@ from auth import login_pagina, get_supabase
 try:
     from modules.database import buscar_dados_dashboard, cadastrar_cliente
     from modules.whatsapp import listar_fila_cobranca
+    # Importação do novo módulo de Configuração de API
+    from modules.api_config import tela_conexao_whatsapp
 except ImportError:
     # Fallback caso o Streamlit Cloud demore a reconhecer a pasta
     st.error("Erro ao carregar módulos. Verifique se a pasta 'modules' existe no GitHub.")
@@ -126,13 +128,31 @@ else:
             with tab1:
                 listar_fila_cobranca(stats["lista_total"])
             with tab2:
-                st.text_input("Instance ID")
-                st.button("Conectar")
+                # Reutilizando a lógica de conexão também aqui se desejar
+                tela_conexao_whatsapp(supabase, user_id)
         else:
             st.info("Nenhum cliente para cobrar.")
 
     # --- PAINEL: CONFIGURAÇÕES ---
     elif menu == "Configurações":
-        st.title("⚙️ Configurações")
-        st.info("Módulos de personalização de temas e regras de negócio em desenvolvimento.")
-    
+        st.title("⚙️ Configurações do Sistema")
+        
+        tab_perfil, tab_api, tab_pagamento = st.tabs(["Meu Perfil", "Conexão WhatsApp", "Pagamentos/Pix"])
+        
+        with tab_perfil:
+            st.subheader("Dados da Empresa")
+            st.write(f"**Empresa:** {st.session_state.usuario.get('nome_empresa')}")
+            st.write(f"**ID de Usuário:** `{user_id}`")
+            st.button("Alterar Senha")
+            
+        with tab_api:
+            # Chamada do módulo de API
+            tela_conexao_whatsapp(supabase, user_id)
+            
+        with tab_pagamento:
+            st.subheader("Configuração de Recebimento")
+            st.info("Aqui seu cliente configurará o Token do Mercado Pago ou Asaas.")
+            st.text_input("Chave API (Produção)")
+            st.text_input("Chave Pix")
+            st.button("Salvar Configurações Financeiras")
+                            
