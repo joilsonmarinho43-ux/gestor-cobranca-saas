@@ -1,0 +1,6 @@
+streamlit==1.31.0
+pandas
+plotly
+supabase
+requests
+st-annotated-text
