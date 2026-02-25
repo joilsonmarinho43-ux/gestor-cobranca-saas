@@ -1,37 +1,32 @@
 import streamlit as st
+from supabase import create_client
 
-def autenticar():
-    if 'logado' not in st.session_state:
-        st.session_state.logado = False
+# Inicializa a conexão com o Supabase usando as Secrets do Streamlit
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
-    if not st.session_state.logado:
-        st.sidebar.title("🔐 Acesso ao Sistema")
-        opcao = st.sidebar.radio("Escolha uma opção", ["Login", "Cadastrar Empresa"])
-
-        if opcao == "Login":
-            st.title("Bem-vindo ao seu Gestor")
-            usuario = st.text_input("E-mail da Empresa")
-            senha = st.text_input("Senha", type="password")
-            
-            if st.button("Entrar no Painel"):
-                # No próximo passo conectaremos isso ao banco de dados
-                if usuario and senha:
-                    st.session_state.logado = True
-                    st.session_state.empresa = usuario
-                    st.success("Login realizado!")
-                    st.rerun()
-                else:
-                    st.error("Preencha todos os campos.")
-
-        else:
-            st.title("Crie sua Conta Ilimitada")
-            nome = st.text_input("Nome da Empresa")
-            novo_email = st.text_input("E-mail de Acesso")
-            nova_senha = st.text_input("Defina uma Senha", type="password")
-            
-            if st.button("Finalizar Cadastro"):
-                st.balloons()
-                st.success("Empresa cadastrada com sucesso! Agora faça o login.")
+def login_pagina():
+    st.title("🔐 Login - Gestor de Cobrança")
+    
+    with st.form("login_form"):
+        email = st.text_input("E-mail")
+        senha = st.text_input("Senha", type="password")
+        botao = st.form_submit_button("Entrar")
         
-        return False
-    return True
+        if botao:
+            # Aqui simulamos o login. Em breve conectaremos com a tabela de usuários.
+            if email == "admin" and senha == "admin":
+                st.session_state.logado = True
+                st.success("Login realizado com sucesso!")
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos.")
+
+def cadastro_pagina():
+    st.title("📝 Criar Conta")
+    # Lógica de cadastro será implementada no próximo passo
+    if st.button("Voltar para o Login"):
+        st.session_state.pagina = 'login'
+        st.rerun()
+        
