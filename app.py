@@ -1,59 +1,104 @@
 import streamlit as st
-from auth import login_pagina  # Ajustado para o nome da função no seu auth.py
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from auth import login_pagina
 
-# 1. Configuração da Página
+# --- CONFIGURAÇÃO INICIAL ---
 st.set_page_config(page_title="Gestor Pro - SaaS", layout="wide", page_icon="🚀")
 
-# 2. Injeção de CSS para o Visual Premium
+# CSS para melhorar o visual dos cards e da sidebar
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 28px; font-weight: bold; }
-    .card-ativo { background-color: #28a745; padding: 20px; border-radius: 15px; color: white; margin-bottom: 10px; }
-    .card-vencido { background-color: #dc3545; padding: 20px; border-radius: 15px; color: white; margin-bottom: 10px; }
-    .card-desativado { background-color: #7030f0; padding: 20px; border-radius: 15px; color: white; margin-bottom: 10px; }
+    [data-testid="stMetricValue"] { font-size: 24px; font-weight: bold; }
+    .main-card { background-color: #f8f9fa; padding: 20px; border-radius: 15px; border: 1px solid #ddd; }
+    section[data-testid="stSidebar"] { width: 320px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Gerenciamento de Estado de Login
+# --- CONTROLE DE ACESSO ---
 if 'logado' not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
     login_pagina()
 else:
-    # Menu Lateral
-    # Exibe o nome da empresa vindo do banco de dados (armazenado no login)
-    nome_empresa = st.session_state.usuario.get('nome_empresa', 'Empresa')
-    st.sidebar.write(f"💼 Empresa: **{nome_empresa}**")
-    
-    menu = st.sidebar.selectbox("Navegação", ["Dashboard", "Clientes", "WhatsApp", "Financeiro"])
-    
-    if st.sidebar.button("Sair"):
-        st.session_state.logado = False
-        st.rerun()
+    # --- CABEÇALHO / TOP BAR ---
+    col_logo, col_vazio, col_user = st.columns([2, 5, 2])
+    with col_logo:
+        st.subheader("🚀 GESTOR PRO")
+    with col_user:
+        with st.expander(f"👤 {st.session_state.usuario.get('nome_empresa', 'Minha Empresa')}"):
+            if st.button("Sair"):
+                st.session_state.logado = False
+                st.rerun()
 
-    # --- TELA: DASHBOARD ---
+    st.divider()
+
+    # --- MENU LATERAL (SIDEBAR) ---
+    with st.sidebar:
+        st.title("Navegação")
+        menu = st.selectbox("Selecione o Módulo", [
+            "Dashboard", "Clientes", "Servidores", "Planos", 
+            "Financeiro", "Relatórios", "WhatsApp", "Configurações"
+        ])
+        
+        st.info(f"Status: Conectado como Admin")
+
+    # --- LÓGICA DAS PÁGINAS ---
+
     if menu == "Dashboard":
         st.title("📊 Painel de Controle")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown('<div class="card-ativo">👥 Clientes Ativos<br><h2>137</h2></div>', unsafe_allow_html=True)
-        with col2:
-            st.markdown('<div class="card-vencido">⚠️ Clientes Vencidos<br><h2>65</h2></div>', unsafe_allow_html=True)
-        with col3:
-            st.markdown('<div class="card-desativado">🚫 Desativados<br><h2>0</h2></div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Clientes Ativos", "137", "+5%")
+        c2.metric("Clientes Vencidos", "65", "-2%", delta_color="inverse")
+        c3.metric("Desativados", "0")
 
         st.divider()
-        
-        st.subheader("💰 Saldo Líquido do Mês")
-        mostrar_saldo = st.checkbox("Mostrar Saldo")
-        if mostrar_saldo:
-            st.info("R$ 4.580,00")
-        else:
-            st.info("R$ ******")
+        st.subheader("💰 Saldo Líquido")
+        ver_valores = st.toggle("Exibir valores financeiros")
+        f1, f2 = st.columns(2)
+        f1.metric("Mês Atual", "R$ 4.580,00" if ver_valores else "R$ ****")
+        f2.metric("Total Anual", "R$ 54.960,00" if ver_valores else "R$ ****")
+
+        # Gráfico de exemplo
+        df = pd.DataFrame(np.random.randn(20, 2), columns=['Ativos', 'Cancelados'])
+        st.area_chart(df)
 
     elif menu == "Clientes":
         st.title("👥 Gestão de Clientes")
-        st.write("Em breve: Integração com a tabela de devedores do Supabase.")
+        acao = st.radio("Ação", ["Adicionar", "Gerenciar", "Aniversariantes"], horizontal=True)
+        if acao == "Adicionar":
+            with st.form("cad_cliente"):
+                st.text_input("Nome do Cliente")
+                st.text_input("WhatsApp (com DDD)")
+                st.date_input("Vencimento")
+                st.form_submit_button("Salvar Cliente")
+
+    elif menu == "Financeiro":
+        st.title("💰 Financeiro")
+        tab1, tab2, tab3 = st.tabs(["Faturas", "Movimentações", "Bancos"])
+        with tab3:
+            st.metric("Saldo Nubank", "R$ 2.450,00")
+            st.metric("Saldo Caixa", "R$ 1.130,00")
+
+    elif menu == "WhatsApp":
+        st.title("📲 WhatsApp")
+        tab1, tab2 = st.tabs(["Parear Dispositivo", "Envios em Massa"])
+        with tab1:
+            st.warning("QR Code expirado. Gere um novo para conectar.")
+            st.button("Gerar QR Code")
+
+    elif menu == "Relatórios":
+        st.title("📈 Relatórios Profissionais")
+        st.selectbox("Tipo de Relatório", ["Inadimplência", "Receita por Plano", "Crescimento Mensal"])
+        st.button("Exportar para Excel")
+
+    elif menu == "Configurações":
+        st.title("⚙️ Configurações do Gestor")
+        with st.expander("Identidade Visual"):
+            st.color_picker("Cor Principal do Painel", "#7030f0")
+            st.file_uploader("Trocar Logotipo")
+        with st.expander("WebHook & Integrações"):
+            st.text_input("URL do WebHook")
         
