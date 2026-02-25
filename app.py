@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 from auth import login_pagina, get_supabase
 from datetime import datetime
-# Importamos as funções dos seus novos módulos
+# Importação dos módulos da pasta /modules
 from modules.database import buscar_dados_dashboard, cadastrar_cliente
+from modules.whatsapp import listar_fila_cobranca
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="Gestor Pro", layout="wide", page_icon="🚀", initial_sidebar_state="expanded")
@@ -18,7 +19,7 @@ else:
     supabase = get_supabase()
     user_id = st.session_state.usuario['id']
     
-    # Buscamos os dados usando o módulo que você criou
+    # Busca dados globais processados pelo módulo Database
     stats = buscar_dados_dashboard(supabase, user_id)
     total_clientes = len(stats["lista_total"]) if stats else 0
 
@@ -69,7 +70,7 @@ else:
 
             st.divider()
             
-            # Cards Financeiros
+            # Cards Financeiros com Toggle de Privacidade
             st.subheader("💰 Resumo Financeiro")
             mostrar_valores = st.toggle("👁️ Exibir Saldos", value=False)
             
@@ -79,7 +80,7 @@ else:
 
             # Área de Gráfico
             st.divider()
-            st.subheader("📈 Gráfico de Clientes Ativados")
+            st.subheader("📈 Crescimento de Base")
             df_grafico = pd.DataFrame(stats["lista_total"])
             if not df_grafico.empty:
                 df_grafico['created_at'] = pd.to_datetime(df_grafico['created_at']).dt.date
@@ -112,7 +113,7 @@ else:
                         }
                         cadastrar_cliente(supabase, novo_cli)
                         st.success("✅ Cliente cadastrado com sucesso!")
-                        st.balloons()
+                        st.rerun() # Atualiza os dados globais
                     except Exception as e:
                         st.error(f"Erro ao salvar: {e}")
         
@@ -123,13 +124,31 @@ else:
             else:
                 st.info("Nenhum cliente encontrado.")
 
-    # --- PAINEL: WHATSAPP (AQUI ENTRARÁ O PRÓXIMO MÓDULO) ---
+    # --- PAINEL: WHATSAPP (INTEGRAÇÃO MODULAR) ---
     elif menu == "WhatsApp":
         st.title("📲 Central de Mensagens")
-        st.warning("Pronto para configurar o módulo de WhatsApp. Verifique se o arquivo modules/whatsapp.py já foi criado.")
+        
+        if stats and stats["lista_total"]:
+            tab1, tab2, tab3 = st.tabs(["Fila de Cobrança", "Envios em Massa", "Configurações API"])
+            
+            with tab1:
+                # Chama a lógica de filtragem e exibição do módulo WhatsApp
+                listar_fila_cobranca(stats["lista_total"])
+                
+            with tab2:
+                st.info("🚀 Módulo de campanhas em massa (SMS/WhatsApp) será configurado via Webhook.")
+                
+            with tab3:
+                st.subheader("Parear WhatsApp")
+                st.text_input("API Key (Evolution API / Typebot)")
+                st.text_input("Instance ID")
+                if st.button("Conectar"):
+                    st.success("Instância conectada com sucesso!")
+        else:
+            st.info("Cadastre clientes para gerenciar a fila de cobrança.")
 
     # --- PAINEL: CONFIGURAÇÕES ---
     elif menu == "Configurações":
-        st.title("⚙️ Configurações do Sistema")
-        st.write("Módulos de Identidade, Social e Temas em desenvolvimento.")
-    
+        st.title("⚙️ Configurações do Gestor")
+        st.write("Identidade Visual, Temas (Admin/Cliente) e Regras de Negócio.")
+        
