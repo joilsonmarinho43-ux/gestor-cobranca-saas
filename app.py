@@ -1,104 +1,83 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import plotly.express as px
-from auth import login_pagina
+from auth import login_pagina, get_supabase
 
-# --- CONFIGURAÇÃO INICIAL ---
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="Gestor Pro - SaaS", layout="wide", page_icon="🚀")
 
-# CSS para melhorar o visual dos cards e da sidebar
-st.markdown("""
-    <style>
-    [data-testid="stMetricValue"] { font-size: 24px; font-weight: bold; }
-    .main-card { background-color: #f8f9fa; padding: 20px; border-radius: 15px; border: 1px solid #ddd; }
-    section[data-testid="stSidebar"] { width: 320px !important; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- CONTROLE DE ACESSO ---
+# 2. CONTROLE DE ACESSO
 if 'logado' not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
     login_pagina()
 else:
-    # --- CABEÇALHO / TOP BAR ---
-    col_logo, col_vazio, col_user = st.columns([2, 5, 2])
-    with col_logo:
-        st.subheader("🚀 GESTOR PRO")
-    with col_user:
-        with st.expander(f"👤 {st.session_state.usuario.get('nome_empresa', 'Minha Empresa')}"):
-            if st.button("Sair"):
-                st.session_state.logado = False
-                st.rerun()
+    supabase = get_supabase()
+    user_id = st.session_state.usuario['id']
 
-    st.divider()
-
-    # --- MENU LATERAL (SIDEBAR) ---
+    # --- SIDEBAR ---
     with st.sidebar:
-        st.title("Navegação")
-        menu = st.selectbox("Selecione o Módulo", [
-            "Dashboard", "Clientes", "Servidores", "Planos", 
-            "Financeiro", "Relatórios", "WhatsApp", "Configurações"
-        ])
-        
-        st.info(f"Status: Conectado como Admin")
+        st.title("🚀 Gestor Pro")
+        st.write(f"💼 **{st.session_state.usuario['nome_empresa']}**")
+        menu = st.selectbox("Navegação", ["Dashboard", "Clientes", "WhatsApp", "Configurações"])
+        if st.button("Sair"):
+            st.session_state.logado = False
+            st.rerun()
 
-    # --- LÓGICA DAS PÁGINAS ---
-
+    # --- DASHBOARD REAL ---
     if menu == "Dashboard":
         st.title("📊 Painel de Controle")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Clientes Ativos", "137", "+5%")
-        c2.metric("Clientes Vencidos", "65", "-2%", delta_color="inverse")
-        c3.metric("Desativados", "0")
+        
+        # Busca dados reais do Supabase
+        res = supabase.table("clientes").select("*").eq("empresa_id", user_id).execute()
+        clientes = res.data
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Clientes Ativos", len([c for c in clientes if c['status'] == 'Ativo']))
+        col2.metric("Clientes Vencidos", "0") # Lógica de data em breve
+        col3.metric("Desativados", len([c for c in clientes if c['status'] == 'Inativo']))
 
         st.divider()
         st.subheader("💰 Saldo Líquido")
-        ver_valores = st.toggle("Exibir valores financeiros")
-        f1, f2 = st.columns(2)
-        f1.metric("Mês Atual", "R$ 4.580,00" if ver_valores else "R$ ****")
-        f2.metric("Total Anual", "R$ 54.960,00" if ver_valores else "R$ ****")
+        ver = st.toggle("Exibir valores")
+        st.info(f"R$ 0,00" if ver else "R$ ****")
 
-        # Gráfico de exemplo
-        df = pd.DataFrame(np.random.randn(20, 2), columns=['Ativos', 'Cancelados'])
-        st.area_chart(df)
-
+    # --- CADASTRO DE CLIENTES REAL ---
     elif menu == "Clientes":
         st.title("👥 Gestão de Clientes")
-        acao = st.radio("Ação", ["Adicionar", "Gerenciar", "Aniversariantes"], horizontal=True)
-        if acao == "Adicionar":
-            with st.form("cad_cliente"):
-                st.text_input("Nome do Cliente")
-                st.text_input("WhatsApp (com DDD)")
-                st.date_input("Vencimento")
-                st.form_submit_button("Salvar Cliente")
+        
+        with st.form("novo_cliente", clear_on_submit=True):
+            st.subheader("Cadastrar Novo Devedor")
+            nome = st.text_input("Nome Completo")
+            zap = st.text_input("WhatsApp (Ex: 5511999999999)")
+            vencimento = st.date_input("Data de Vencimento")
+            valor = st.number_input("Valor da Fatura", min_value=0.0)
+            
+            if st.form_submit_button("Salvar Cliente"):
+                novo_cli = {
+                    "empresa_id": user_id,
+                    "nome": nome,
+                    "whatsapp": zap,
+                    "data_vencimento": str(vencimento),
+                    "valor_assinatura": valor
+                }
+                supabase.table("clientes").insert(novo_cli).execute()
+                st.success("Cliente cadastrado com sucesso!")
+                st.balloons()
 
-    elif menu == "Financeiro":
-        st.title("💰 Financeiro")
-        tab1, tab2, tab3 = st.tabs(["Faturas", "Movimentações", "Bancos"])
-        with tab3:
-            st.metric("Saldo Nubank", "R$ 2.450,00")
-            st.metric("Saldo Caixa", "R$ 1.130,00")
-
-    elif menu == "WhatsApp":
-        st.title("📲 WhatsApp")
-        tab1, tab2 = st.tabs(["Parear Dispositivo", "Envios em Massa"])
-        with tab1:
-            st.warning("QR Code expirado. Gere um novo para conectar.")
-            st.button("Gerar QR Code")
-
-    elif menu == "Relatórios":
-        st.title("📈 Relatórios Profissionais")
-        st.selectbox("Tipo de Relatório", ["Inadimplência", "Receita por Plano", "Crescimento Mensal"])
-        st.button("Exportar para Excel")
-
+    # --- CONFIGURAÇÕES REAIS ---
     elif menu == "Configurações":
-        st.title("⚙️ Configurações do Gestor")
-        with st.expander("Identidade Visual"):
-            st.color_picker("Cor Principal do Painel", "#7030f0")
-            st.file_uploader("Trocar Logotipo")
-        with st.expander("WebHook & Integrações"):
-            st.text_input("URL do WebHook")
+        st.title("⚙️ Configurações")
+        # Busca configurações ou cria se não existir
+        conf_res = supabase.table("configuracoes").select("*").eq("empresa_id", user_id).execute()
+        
+        if not conf_res.data:
+            supabase.table("configuracoes").insert({"empresa_id": user_id}).execute()
+            st.rerun()
+            
+        config = conf_res.data[0]
+        cor = st.color_picker("Cor do Painel", config['cor_principal'])
+        if st.button("Salvar Preferências"):
+            supabase.table("configuracoes").update({"cor_principal": cor}).eq("empresa_id", user_id).execute()
+            st.success("Configurações atualizadas!")
         
