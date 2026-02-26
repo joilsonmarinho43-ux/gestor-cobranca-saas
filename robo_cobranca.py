@@ -1,27 +1,31 @@
-import os
 import sys
+import os
 
-# Força a exibição imediata de mensagens
-def imprimir(msg):
-    print(msg)
+# Força a saída de texto imediata
+def falar(texto):
+    print(texto)
     sys.stdout.flush()
 
-imprimir("=== INICIANDO TESTE FORÇADO ===")
+falar("==========================================")
+falar("INICIANDO DIAGNÓSTICO DO ROBÔ")
+falar("==========================================")
 
 try:
+    falar("Testando acesso às variáveis...")
     url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    
-    imprimir(f"Verificando chaves: {'OK' if url and key else 'FALTANDO'}")
-    
     if url:
-        imprimir(f"URL detectada (início): {url[:10]}...")
-    
-    imprimir("Tentando processar lógica...")
-    # Se houver qualquer erro aqui, o 'except' abaixo vai capturar
-    imprimir("PROCESSO CONCLUÍDO COM SUCESSO.")
+        falar(f"Variável SUPABASE_URL encontrada.")
+    else:
+        falar("AVISO: SUPABASE_URL está vazia.")
+
+    falar("Tentando importar bibliotecas...")
+    import supabase
+    import requests
+    falar("Sucesso: Bibliotecas importadas corretamente.")
 
 except Exception as e:
-    imprimir(f"ERRO ENCONTRADO: {str(e)}")
+    falar(f"ERRO IDENTIFICADO: {str(e)}")
 
-imprimir("=== FIM DO TESTE ===")
+falar("==========================================")
+falar("FIM DO DIAGNÓSTICO")
+falar("==========================================")
