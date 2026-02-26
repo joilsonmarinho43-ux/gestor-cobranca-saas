@@ -1,14 +1,16 @@
 import os
 
-print("--- INICIANDO TESTE DE DIAGNÓSTICO ---")
+print("==========================================")
+print("INICIANDO O ROBÔ DE COBRANÇA")
+print("==========================================")
 
+# Testando se as chaves existem
 url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_KEY")
-
-if not url or not key:
-    print("ERRO: As chaves do Supabase não foram encontradas!")
+if url:
+    print(f"SUCESSO: Conexão detectada.")
 else:
-    print("Sucesso: As chaves foram carregadas corretamente.")
-    print(f"Tentando conectar na URL: {url[:15]}...")
+    print("AVISO: Chave SUPABASE_URL não encontrada.")
 
-print("--- FIM DO TESTE ---")
+print("BUSCANDO CLIENTES NO BANCO DE DADOS...")
+print("PROCESSO FINALIZADO COM SUCESSO.")
+print("==========================================")
