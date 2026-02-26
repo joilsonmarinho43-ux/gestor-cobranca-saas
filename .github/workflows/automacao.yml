@@ -28,3 +28,4 @@ jobs:
           API_WHATSAPP_URL: ${{ secrets.API_WHATSAPP_URL }}
           API_WHATSAPP_KEY: ${{ secrets.API_WHATSAPP_KEY }}
         run: python robo_cobranca.py
+        
