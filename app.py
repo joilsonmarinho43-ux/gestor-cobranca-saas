@@ -58,4 +58,3 @@ elif menu == "WhatsApp":
 
 elif menu == "Relatórios":
     dashboard_analitico.show()
-    
