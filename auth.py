@@ -1,38 +1,42 @@
 import streamlit as st
-from supabase import create_client
+from core.database import get_connection
 
-# Inicializa a conexão com o Supabase usando as Secrets
-def get_supabase():
+def autenticar_usuario(email, senha):
+    supabase = get_connection()
+    
     try:
-        url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_KEY"]
-        return create_client(url, key)
-    except Exception as e:
-        st.error("Erro ao carregar as credenciais do Supabase nas Secrets.")
+        resposta = (
+            supabase
+            .table("empresas")
+            .select("*")
+            .eq("email", email)
+            .eq("senha", senha)
+            .execute()
+        )
+
+        if resposta.data:
+            return resposta.data[0]
         return None
 
-def login_pagina():
+    except Exception:
+        return None
+
+
+def login_view():
     st.title("🔐 Login - Gestor de Cobrança")
-    
+
     with st.form("login_form"):
         email_input = st.text_input("E-mail")
         senha_input = st.text_input("Senha", type="password")
         botao = st.form_submit_button("Entrar")
-        
+
         if botao:
-            supabase = get_supabase()
-            if supabase:
-                try:
-                    # Busca o usuário na tabela 'empresas'
-                    resposta = supabase.table("empresas").select("*").eq("email", email_input).eq("senha", senha_input).execute()
-                    
-                    if len(resposta.data) > 0:
-                        st.session_state.logado = True
-                        st.session_state.usuario = resposta.data[0]
-                        st.success("Login realizado com sucesso!")
-                        st.rerun()
-                    else:
-                        st.error("E-mail ou senha incorretos.")
-                except Exception as e:
-                    st.error(f"Erro de conexão com o banco: {e}")
-                    
+            usuario = autenticar_usuario(email_input, senha_input)
+
+            if usuario:
+                st.session_state["logado"] = True
+                st.session_state["usuario"] = usuario
+                st.success("Login realizado com sucesso!")
+                st.rerun()
+            else:
+                st.error("E-mail ou senha incorretos.")
