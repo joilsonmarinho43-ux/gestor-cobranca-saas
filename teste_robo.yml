@@ -1,0 +1,22 @@
+name: Teste Robo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-robo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Executar Robo
+        run: python jobs/executar_robo.py
