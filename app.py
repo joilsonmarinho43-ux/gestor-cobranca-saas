@@ -7,7 +7,6 @@ from supabase import create_client, Client
 st.set_page_config(page_title="Sol da Vida - Gestão", layout="wide", page_icon="☀️")
 
 # 2. Ajuste de Caminho para Pastas Duplicadas
-# Este bloco resolve o erro de 'ModuleNotFoundError' apontando para a pasta interna
 current_dir = os.path.dirname(os.path.abspath(__file__))
 nested_modules_path = os.path.join(current_dir, "modules", "modules")
 if nested_modules_path not in sys.path:
@@ -26,7 +25,7 @@ except Exception as e:
     st.error(f"Erro na ligação ao banco de dados: {e}")
     supabase = None
 
-# 4. Importação dos Módulos (Ajustada para a estrutura atual)
+# 4. Importação dos Módulos
 try:
     import clientes.gerenciar_clientes as gerenciar_clientes
     import financeiro.fluxo_caixa as fluxo_caixa
@@ -34,18 +33,26 @@ try:
     import relatorios.dashboard_analitico as dashboard_analitico
 except Exception as e:
     st.error(f"Erro ao carregar arquivos de módulos: {e}")
-    st.info("Verifique se os arquivos .py estão dentro de modules/modules/")
 
 # 5. Estilização (CSS)
 if os.path.exists("assets/style.css"):
     with open("assets/style.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# 6. Menu Lateral
-if os.path.exists("assets/logo.png"):
-    st.sidebar.image("assets/logo.png", width=150)
-else:
-    st.sidebar.title("☀️ Sol da Vida")
+# 6. Menu Lateral (CORRIGIDO PARA EVITAR ERRO DE IMAGEM)
+with st.sidebar:
+    try:
+        # Tenta carregar a imagem. Se falhar por ser um arquivo inválido, cai no except
+        if os.path.exists("assets/logo.png"):
+            st.image("assets/logo.png", width=150)
+        else:
+            st.title("☀️ Sol da Vida")
+    except Exception:
+        # Caso o arquivo logo.png não seja uma imagem real, exibe apenas o texto
+        st.title("☀️ Sol da Vida")
+    
+    st.markdown("---")
+    st.title("Menu Principal")
 
 menu = st.sidebar.radio(
     "Selecione o Módulo:",
@@ -67,11 +74,14 @@ elif menu == "Clientes":
         st.error("Módulo de Clientes não carregado.")
 
 elif menu == "Financeiro":
-    fluxo_caixa.show()
+    if 'fluxo_caixa' in globals():
+        fluxo_caixa.show()
 
 elif menu == "WhatsApp":
-    mensagens.show()
+    if 'mensagens' in globals():
+        mensagens.show()
 
 elif menu == "Relatórios":
-    dashboard_analitico.show()
-    
+    if 'dashboard_analitico' in globals():
+        dashboard_analitico.show()
+        
