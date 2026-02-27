@@ -7,7 +7,7 @@ from supabase import create_client, Client
 # 1. Configuração da Página
 st.set_page_config(page_title="Sol da Vida - Gestão", layout="wide", page_icon="☀️")
 
-# 2. Ajuste de Caminho para Pastas Duplicadas
+# 2. Ajuste de Caminho para Pastas
 current_dir = os.path.dirname(os.path.abspath(__file__))
 nested_modules_path = os.path.join(current_dir, "modules", "modules")
 if nested_modules_path not in sys.path:
@@ -64,11 +64,11 @@ if menu == "Dashboard":
     
     if supabase:
         try:
-            # Busca total de clientes
+            # Busca dados reais para o Dashboard
             res_clie = supabase.table("clientes").select("id, valor_mensalidade", count="exact").execute()
             total_clientes = res_clie.count if res_clie.count else 0
             
-            # Calcula faturamento previsto baseado nas mensalidades cadastradas
+            # Soma das mensalidades previstas
             faturamento_previsto = sum([c['valor_mensalidade'] for c in res_clie.data if c.get('valor_mensalidade')])
             
             # Busca cobranças pendentes na tabela cobrancas
@@ -82,11 +82,13 @@ if menu == "Dashboard":
             col3.metric("Total a Receber", f"R$ {total_pendente:,.2f}")
             
             st.divider()
-            st.subheader("Evolução da Base")
-            # Gráfico refletindo os dados reais
-            st.area_chart({"Clientes": [0, total_clientes]})
-            
-        except Exception as e:
+            if total_clientes > 0:
+                st.subheader("Evolução da Base")
+                st.area_chart({"Clientes": [0, total_clientes]})
+            else:
+                st.info("Cadastre seu primeiro cliente para ver os gráficos!")
+                
+        except Exception:
             st.info("Cadastre cobranças no módulo Financeiro para visualizar as métricas completas.")
     else:
         st.error("Conexão com banco de dados indisponível.")
@@ -106,4 +108,4 @@ elif menu == "WhatsApp":
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
-        
+                
