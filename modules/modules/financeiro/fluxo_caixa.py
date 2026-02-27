@@ -1,54 +1,46 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 def show(supabase):
-    st.title("💰 Fluxo de Caixa")
+    st.header("💰 Fluxo de Caixa e Cobranças")
     
     if supabase is None:
-        st.error("Erro na conexão com o banco.")
+        st.error("Erro na ligação ao banco.")
         return
 
-    tabs = st.tabs(["Faturas Pendentes", "Gerar Cobranças", "Histórico"])
-
-    # ABA 1: LISTAGEM
-    with tabs[0]:
+    st.subheader("Gerar Cobranças do Mês")
+    if st.button("🚀 Gerar Faturas para Todos os Clientes"):
         try:
-            response = supabase.table("cobrancas").select("*, clientes(nome)").eq("status", "Pendente").execute()
-            if response.data:
-                df = pd.DataFrame(response.data)
-                df['Cliente'] = df['clientes'].apply(lambda x: x['nome'] if x else "N/A")
-                st.dataframe(df[['Cliente', 'valor', 'data_vencimento']], use_container_width=True)
-            else:
-                st.info("Nenhuma fatura pendente encontrada.")
-        except Exception as e:
-            st.error(f"Erro ao carregar faturas: {e}")
-
-    # ABA 2: GERADOR AUTOMÁTICO
-    with tabs[1]:
-        st.subheader("Gerar Mensalidades do Mês")
-        st.write("Este botão criará uma fatura para TODOS os clientes cadastrados.")
-        
-        col1, col2 = st.columns(2)
-        valor_padrao = col1.number_input("Valor Padrão (R$)", min_value=0.0, value=150.0)
-        data_venc = col2.date_input("Vencimento das Faturas")
-
-        if st.button("Gerar Faturas para Todos 🚀"):
-            try:
-                # Busca todos os clientes (como Elieusa e Joelison)
-                clientes = supabase.table("clientes").select("id, nome").execute()
-                
-                for c in clientes.data:
-                    data_insert = {
-                        "cliente_id": c['id'],
-                        "valor": valor_padrao,
-                        "data_vencimento": str(data_venc),
-                        "status": "Pendente"
+            # Busca todos os clientes ativos com mensalidade
+            clientes = supabase.table("clientes").select("id, valor_mensalidade").execute()
+            
+            if clientes.data:
+                for clie in clientes.data:
+                    nova_cobranca = {
+                        "cliente_id": clie['id'],
+                        "valor": float(clie['valor_mensalidade'] or 0),
+                        "status": "Pendente",
+                        "data_vencimento": "2026-02-27" # Data de exemplo
                     }
-                    supabase.table("cobrancas").insert(data_insert).execute()
-                
-                st.success(f"✅ Faturas geradas para {len(clientes.data)} clientes!")
+                    supabase.table("cobrancas").insert(nova_cobranca).execute()
+                st.success("✅ Faturas geradas com sucesso!")
                 st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao gerar: {e}")
+            else:
+                st.warning("Nenhum cliente ativo encontrado.")
+        except Exception as e:
+            st.error(f"Erro ao gerar cobranças: {e}")
+
+    st.divider()
+    st.subheader("Cobranças Atuais")
+    try:
+        # Tenta listar cobranças unindo com o nome do cliente
+        response = supabase.table("cobrancas").select("*, clientes(nome)").execute()
+        if response.data:
+            df = pd.DataFrame(response.data)
+            df['Cliente'] = df['clientes'].apply(lambda x: x['nome'] if x else "N/A")
+            st.table(df[['Cliente', 'valor', 'status']])
+        else:
+            st.info("Nenhuma cobrança registada.")
+    except Exception:
+        st.warning("Tabela de cobranças ainda não configurada no banco.")
         
