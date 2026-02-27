@@ -1,16 +1,33 @@
 import streamlit as st
+import pandas as pd
 
-def show():
+def show(supabase):
     st.header("👥 Gerenciar Clientes")
-    st.write("Aqui você poderá adicionar, editar e visualizar seus clientes.")
     
-    # Métricas baseadas no seu sistema original
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Ativos", "137")
-    col2.metric("Vencidos", "65")
-    col3.metric("Desativados", "0")
-    
+    if supabase is None:
+        st.error("Banco de dados não configurado.")
+        return
+
+    # Botão para adicionar novo (apenas visual por enquanto)
+    if st.button("➕ Novo Cliente"):
+        st.info("Funcionalidade de cadastro será implementada no próximo passo.")
+
     st.divider()
-    st.subheader("Lista de Clientes")
-    st.info("A integração com o banco de dados aparecerá aqui em breve.")
-  
+
+    # Procurar dados no Supabase
+    try:
+        # Tenta selecionar todos os dados da tabela 'clientes'
+        response = supabase.table("clientes").select("*").execute()
+        dados = response.data
+
+        if dados:
+            df = pd.DataFrame(dados)
+            st.subheader("Lista de Clientes Cadastrados")
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("Nenhum cliente encontrado na tabela 'clientes'.")
+            
+    except Exception as e:
+        st.warning("Aviso: A tabela 'clientes' ainda não existe no seu Supabase ou está vazia.")
+        st.code("Dica: Crie uma tabela chamada 'clientes' no painel do Supabase com as colunas: id, nome, status.")
+        
