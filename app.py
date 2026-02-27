@@ -7,7 +7,7 @@ from supabase import create_client, Client
 # 1. Configuração da Página
 st.set_page_config(page_title="Sol da Vida - Gestão", layout="wide", page_icon="☀️")
 
-# 2. Ajuste de Caminho para Pastas Duplicadas
+# 2. Ajuste de Caminho para Pastas
 current_dir = os.path.dirname(os.path.abspath(__file__))
 nested_modules_path = os.path.join(current_dir, "modules", "modules")
 if nested_modules_path not in sys.path:
@@ -16,15 +16,14 @@ if nested_modules_path not in sys.path:
 # 3. Conexão ao Supabase
 @st.cache_resource
 def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    except Exception:
+        return None
 
-try:
-    supabase = init_connection()
-except Exception as e:
-    st.error(f"Erro na ligação ao banco de dados: {e}")
-    supabase = None
+supabase = init_connection()
 
 # 4. Importação dos Módulos
 try:
@@ -33,7 +32,7 @@ try:
     import whatsapp.mensagens as mensagens
     import relatorios.dashboard_analitico as dashboard_analitico
 except Exception as e:
-    st.error(f"Erro ao carregar arquivos de módulos: {e}")
+    st.error(f"Erro ao carregar arquivos: {e}")
 
 # 5. Estilização (CSS)
 if os.path.exists("assets/style.css"):
@@ -42,71 +41,48 @@ if os.path.exists("assets/style.css"):
 
 # 6. Menu Lateral
 with st.sidebar:
-    try:
-        if os.path.exists("assets/logo.png"):
-            st.image("assets/logo.png", width=150)
-        else:
-            st.title("☀️ Sol da Vida")
-    except Exception:
+    if os.path.exists("assets/logo.png"):
+        st.image("assets/logo.png", width=150)
+    else:
         st.title("☀️ Sol da Vida")
     
     st.markdown("---")
-    st.title("Menu Principal")
+    menu = st.sidebar.radio("Selecione o Módulo:", ["Dashboard", "Clientes", "Financeiro", "WhatsApp", "Relatórios"])
 
-menu = st.sidebar.radio(
-    "Selecione o Módulo:",
-    ["Dashboard", "Clientes", "Financeiro", "WhatsApp", "Relatórios"]
-)
-
-# 7. Navegação e Lógica Dinâmica
+# 7. Lógica do Dashboard Dinâmico
 if menu == "Dashboard":
     st.title("🏠 Painel Principal")
     
     if supabase:
+        # Busca Clientes
+        res_clie = supabase.table("clientes").select("id, valor_mensalidade").execute()
+        total_clientes = len(res_clie.data) if res_clie.data else 0
+        faturamento_previsto = sum([float(c.get('valor_mensalidade', 0)) for c in res_clie.data])
+        
+        # Busca Cobranças (Tratado para não dar erro se a tabela não existir)
         try:
-            # Busca dados reais para o Dashboard
-            res_clie = supabase.table("clientes").select("id, valor_mensalidade", count="exact").execute()
-            total_clientes = res_clie.count if res_clie.count else 0
-            
-            # Soma das mensalidades previstas dos clientes ativos
-            faturamento_previsto = sum([c['valor_mensalidade'] for c in res_clie.data if c.get('valor_mensalidade')])
-            
-            # Busca cobranças pendentes na tabela cobrancas
             res_cob = supabase.table("cobrancas").select("valor").eq("status", "Pendente").execute()
-            total_pendente = sum([cob['valor'] for cob in res_cob.data])
-
-            # Exibição das Métricas Reais
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Clientes Ativos", total_clientes)
-            col2.metric("Faturamento Mensal (Previsto)", f"R$ {faturamento_previsto:,.2f}")
-            col3.metric("Total a Receber (Pendentes)", f"R$ {total_pendente:,.2f}")
-            
-            st.divider()
-            if total_clientes > 0:
-                st.subheader("Evolução da Base")
-                st.area_chart({"Clientes": [0, total_clientes]})
-            else:
-                st.info("Cadastre seu primeiro cliente para ver os gráficos!")
-                
+            total_pendente = sum([float(cob['valor']) for cob in res_cob.data])
         except Exception:
-            # Mensagem de orientação caso a tabela de cobranças ainda não exista
-            st.info("Cadastre cobranças no módulo Financeiro para visualizar as métricas completas.")
+            total_pendente = 0.0
+
+        # Exibição das Métricas
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Clientes Ativos", total_clientes)
+        col2.metric("Faturamento Mensal", f"R$ {faturamento_previsto:,.2f}")
+        col3.metric("Total a Receber", f"R$ {total_pendente:,.2f}")
+        
+        st.divider()
+        st.area_chart({"Clientes": [0, total_clientes] if total_clientes > 0 else [0, 0]})
     else:
-        st.error("Conexão com banco de dados indisponível.")
+        st.error("Configure as chaves do Supabase no Streamlit Cloud.")
 
+# 8. Navegação de Módulos
 elif menu == "Clientes":
-    if 'gerenciar_clientes' in globals():
-        gerenciar_clientes.show(supabase)
-
+    if 'gerenciar_clientes' in globals(): gerenciar_clientes.show(supabase)
 elif menu == "Financeiro":
-    if 'fluxo_caixa' in globals():
-        fluxo_caixa.show(supabase)
-
+    if 'fluxo_caixa' in globals(): fluxo_caixa.show(supabase)
 elif menu == "WhatsApp":
-    if 'mensagens' in globals():
-        mensagens.show(supabase)
-
+    if 'mensagens' in globals(): mensagens.show(supabase)
 elif menu == "Relatórios":
-    if 'dashboard_analitico' in globals():
-        dashboard_analitico.show()
-            
+    if 'dashboard_analitico' in globals(): dashboard_analitico.show()
