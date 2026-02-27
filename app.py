@@ -39,16 +39,14 @@ if os.path.exists("assets/style.css"):
     with open("assets/style.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# 6. Menu Lateral (CORRIGIDO PARA EVITAR ERRO DE IMAGEM)
+# 6. Menu Lateral
 with st.sidebar:
     try:
-        # Tenta carregar a imagem. Se falhar por ser um arquivo inválido, cai no except
         if os.path.exists("assets/logo.png"):
             st.image("assets/logo.png", width=150)
         else:
             st.title("☀️ Sol da Vida")
     except Exception:
-        # Caso o arquivo logo.png não seja uma imagem real, exibe apenas o texto
         st.title("☀️ Sol da Vida")
     
     st.markdown("---")
@@ -59,13 +57,16 @@ menu = st.sidebar.radio(
     ["Dashboard", "Clientes", "Financeiro", "WhatsApp", "Relatórios"]
 )
 
-# 7. Navegação
+# 7. Navegação e Lógica de Módulos
 if menu == "Dashboard":
     st.title("🏠 Painel Principal")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Clientes Ativos", "137")
-    col2.metric("Vencidos", "65")
-    st.line_chart({"Ativações": [10, 25, 40, 65, 90, 110, 137]})
+    
+    # Aqui buscaremos dados reais no próximo passo para substituir estes números fixos
+    col1, col2 = st.columns(2)
+    col1.metric("Clientes Ativos", "2") # Exemplo baseado nos seus prints atuais
+    col2.metric("Cobranças Pendentes", "Pendente")
+    
+    st.line_chart({"Ativações": [1, 2]}) # Refletindo Elieusa e Joelison
 
 elif menu == "Clientes":
     if 'gerenciar_clientes' in globals():
@@ -75,13 +76,19 @@ elif menu == "Clientes":
 
 elif menu == "Financeiro":
     if 'fluxo_caixa' in globals():
-        fluxo_caixa.show()
+        fluxo_caixa.show(supabase) # Corrigido: agora recebe o banco de dados
+    else:
+        st.error("Módulo Financeiro não carregado.")
 
 elif menu == "WhatsApp":
     if 'mensagens' in globals():
-        mensagens.show()
+        mensagens.show(supabase) # Corrigido: agora recebe o banco de dados
+    else:
+        st.error("Módulo WhatsApp não carregado.")
 
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
-        
+    else:
+        st.error("Módulo de Relatórios não carregado.")
+    
