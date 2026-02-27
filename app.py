@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import sys
+import pandas as pd
 from supabase import create_client, Client
 
 # 1. Configuração da Página
@@ -57,38 +58,53 @@ menu = st.sidebar.radio(
     ["Dashboard", "Clientes", "Financeiro", "WhatsApp", "Relatórios"]
 )
 
-# 7. Navegação e Lógica de Módulos
+# 7. Navegação e Lógica de Negócio
 if menu == "Dashboard":
     st.title("🏠 Painel Principal")
     
-    # Aqui buscaremos dados reais no próximo passo para substituir estes números fixos
-    col1, col2 = st.columns(2)
-    col1.metric("Clientes Ativos", "2") # Exemplo baseado nos seus prints atuais
-    col2.metric("Cobranças Pendentes", "Pendente")
-    
-    st.line_chart({"Ativações": [1, 2]}) # Refletindo Elieusa e Joelison
+    if supabase:
+        try:
+            # Busca total de clientes
+            res_clientes = supabase.table("clientes").select("id", count="exact").execute()
+            total_clientes = res_clientes.count if res_clientes.count else 0
+            
+            # Busca faturamento previsto (soma de mensalidades dos clientes)
+            res_mensalidades = supabase.table("clientes").select("valor_mensalidade").execute()
+            faturamento_previsto = sum([c['valor_mensalidade'] for c in res_mensalidades.data if c['valor_mensalidade']])
+            
+            # Busca cobranças pendentes
+            res_pendente = supabase.table("cobrancas").select("valor").eq("status", "Pendente").execute()
+            total_pendente = sum([cob['valor'] for cob in res_pendente.data])
+
+            # Exibição das Métricas Reais
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Clientes Ativos", total_clientes)
+            col2.metric("Faturamento Mensal (Previsto)", f"R$ {faturamento_previsto:,.2f}")
+            col3.metric("Total a Receber (Pendentes)", f"R$ {total_pendente:,.2f}")
+            
+            st.divider()
+            st.subheader("Evolução da Carteira")
+            # Exemplo de gráfico baseado no número real de clientes
+            st.area_chart({"Clientes": [0, total_clientes]})
+            
+        except Exception as e:
+            st.warning(f"Algumas métricas ainda não podem ser calculadas: {e}")
+    else:
+        st.error("Banco de dados offline.")
 
 elif menu == "Clientes":
     if 'gerenciar_clientes' in globals():
         gerenciar_clientes.show(supabase)
-    else:
-        st.error("Módulo de Clientes não carregado.")
 
 elif menu == "Financeiro":
     if 'fluxo_caixa' in globals():
-        fluxo_caixa.show(supabase) # Corrigido: agora recebe o banco de dados
-    else:
-        st.error("Módulo Financeiro não carregado.")
+        fluxo_caixa.show(supabase)
 
 elif menu == "WhatsApp":
     if 'mensagens' in globals():
-        mensagens.show(supabase) # Corrigido: agora recebe o banco de dados
-    else:
-        st.error("Módulo WhatsApp não carregado.")
+        mensagens.show(supabase)
 
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
-    else:
-        st.error("Módulo de Relatórios não carregado.")
     
