@@ -107,4 +107,3 @@ elif menu == "WhatsApp":
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
-    
