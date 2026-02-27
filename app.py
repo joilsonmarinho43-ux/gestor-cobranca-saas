@@ -7,7 +7,7 @@ from supabase import create_client, Client
 # 1. Configuração da Página
 st.set_page_config(page_title="Sol da Vida - Gestão", layout="wide", page_icon="☀️")
 
-# 2. Ajuste de Caminho para Pastas
+# 2. Ajuste de Caminho para Pastas Duplicadas
 current_dir = os.path.dirname(os.path.abspath(__file__))
 nested_modules_path = os.path.join(current_dir, "modules", "modules")
 if nested_modules_path not in sys.path:
@@ -68,7 +68,7 @@ if menu == "Dashboard":
             res_clie = supabase.table("clientes").select("id, valor_mensalidade", count="exact").execute()
             total_clientes = res_clie.count if res_clie.count else 0
             
-            # Soma das mensalidades previstas
+            # Soma das mensalidades previstas dos clientes ativos
             faturamento_previsto = sum([c['valor_mensalidade'] for c in res_clie.data if c.get('valor_mensalidade')])
             
             # Busca cobranças pendentes na tabela cobrancas
@@ -78,8 +78,8 @@ if menu == "Dashboard":
             # Exibição das Métricas Reais
             col1, col2, col3 = st.columns(3)
             col1.metric("Clientes Ativos", total_clientes)
-            col2.metric("Faturamento Mensal", f"R$ {faturamento_previsto:,.2f}")
-            col3.metric("Total a Receber", f"R$ {total_pendente:,.2f}")
+            col2.metric("Faturamento Mensal (Previsto)", f"R$ {faturamento_previsto:,.2f}")
+            col3.metric("Total a Receber (Pendentes)", f"R$ {total_pendente:,.2f}")
             
             st.divider()
             if total_clientes > 0:
@@ -89,6 +89,7 @@ if menu == "Dashboard":
                 st.info("Cadastre seu primeiro cliente para ver os gráficos!")
                 
         except Exception:
+            # Mensagem de orientação caso a tabela de cobranças ainda não exista
             st.info("Cadastre cobranças no módulo Financeiro para visualizar as métricas completas.")
     else:
         st.error("Conexão com banco de dados indisponível.")
@@ -108,4 +109,4 @@ elif menu == "WhatsApp":
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
-                
+            
