@@ -1,0 +1,42 @@
+/* Ajuste do Menu Lateral (Sidebar) */
+[data-testid="stSidebar"] {
+    background-color: #002e5d; /* Azul escuro profissional */
+    color: white;
+}
+
+/* Garante que os textos do menu fiquem brancos */
+[data-testid="stSidebar"] .stText, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p {
+    color: white !important;
+}
+
+/* Estilização dos Cards de Métricas (Dashboard) */
+[data-testid="stMetricValue"] {
+    font-size: 28px;
+    font-weight: bold;
+    color: #002e5d;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 16px;
+    color: #666;
+}
+
+/* Estilo geral da página principal */
+.main {
+    background-color: #f8f9fa;
+}
+
+/* Customização de botões para parecerem mais modernos */
+.stButton>button {
+    border-radius: 8px;
+    border: 1px solid #002e5d;
+    background-color: #002e5d;
+    color: white;
+    transition: 0.3s;
+}
+
+.stButton>button:hover {
+    background-color: #004080;
+    border-color: #004080;
+    color: white;
+}
