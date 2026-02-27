@@ -58,39 +58,38 @@ menu = st.sidebar.radio(
     ["Dashboard", "Clientes", "Financeiro", "WhatsApp", "Relatórios"]
 )
 
-# 7. Navegação e Lógica de Negócio
+# 7. Navegação e Lógica Dinâmica
 if menu == "Dashboard":
     st.title("🏠 Painel Principal")
     
     if supabase:
         try:
             # Busca total de clientes
-            res_clientes = supabase.table("clientes").select("id", count="exact").execute()
-            total_clientes = res_clientes.count if res_clientes.count else 0
+            res_clie = supabase.table("clientes").select("id, valor_mensalidade", count="exact").execute()
+            total_clientes = res_clie.count if res_clie.count else 0
             
-            # Busca faturamento previsto (soma de mensalidades dos clientes)
-            res_mensalidades = supabase.table("clientes").select("valor_mensalidade").execute()
-            faturamento_previsto = sum([c['valor_mensalidade'] for c in res_mensalidades.data if c['valor_mensalidade']])
+            # Calcula faturamento previsto baseado nas mensalidades cadastradas
+            faturamento_previsto = sum([c['valor_mensalidade'] for c in res_clie.data if c.get('valor_mensalidade')])
             
-            # Busca cobranças pendentes
-            res_pendente = supabase.table("cobrancas").select("valor").eq("status", "Pendente").execute()
-            total_pendente = sum([cob['valor'] for cob in res_pendente.data])
+            # Busca cobranças pendentes na tabela cobrancas
+            res_cob = supabase.table("cobrancas").select("valor").eq("status", "Pendente").execute()
+            total_pendente = sum([cob['valor'] for cob in res_cob.data])
 
             # Exibição das Métricas Reais
             col1, col2, col3 = st.columns(3)
             col1.metric("Clientes Ativos", total_clientes)
-            col2.metric("Faturamento Mensal (Previsto)", f"R$ {faturamento_previsto:,.2f}")
-            col3.metric("Total a Receber (Pendentes)", f"R$ {total_pendente:,.2f}")
+            col2.metric("Faturamento Mensal", f"R$ {faturamento_previsto:,.2f}")
+            col3.metric("Total a Receber", f"R$ {total_pendente:,.2f}")
             
             st.divider()
-            st.subheader("Evolução da Carteira")
-            # Exemplo de gráfico baseado no número real de clientes
+            st.subheader("Evolução da Base")
+            # Gráfico refletindo os dados reais
             st.area_chart({"Clientes": [0, total_clientes]})
             
         except Exception as e:
-            st.warning(f"Algumas métricas ainda não podem ser calculadas: {e}")
+            st.info("Cadastre cobranças no módulo Financeiro para visualizar as métricas completas.")
     else:
-        st.error("Banco de dados offline.")
+        st.error("Conexão com banco de dados indisponível.")
 
 elif menu == "Clientes":
     if 'gerenciar_clientes' in globals():
@@ -107,3 +106,4 @@ elif menu == "WhatsApp":
 elif menu == "Relatórios":
     if 'dashboard_analitico' in globals():
         dashboard_analitico.show()
+        
