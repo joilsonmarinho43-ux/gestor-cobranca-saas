@@ -49,11 +49,15 @@ def show(supabase):
 
         if dados:
             df = pd.DataFrame(dados)
-            # Organizando as colunas para ficar bonito
-            df = df[['nome', 'whatsapp', 'valor_mensalidade', 'vencimento', 'status']]
-            st.dataframe(df, use_container_width=True)
+            
+            # Filtra apenas as colunas que realmente existem no DataFrame para evitar o erro de index
+            colunas_desejadas = ['nome', 'whatsapp', 'valor_mensalidade', 'vencimento', 'status']
+            colunas_existentes = [col for col in colunas_desejadas if col in df.columns]
+            
+            st.dataframe(df[colunas_existentes], use_container_width=True)
         else:
             st.info("Ainda não há clientes cadastrados.")
             
     except Exception as e:
         st.error(f"Erro ao carregar lista: {e}")
+        
