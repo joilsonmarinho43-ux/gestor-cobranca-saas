@@ -13,18 +13,17 @@ def show(supabase):
         with st.form("form_cadastro"):
             col1, col2 = st.columns(2)
             nome = col1.text_input("Nome Completo")
-            whatsapp = col2.text_input("WhatsApp (Ex: 5511999998888)")
+            whatsapp = col2.text_input("WhatsApp (com DDD)")
             
-            col3, col4 = st.columns(2)
-            # Garantindo que o valor seja um número decimal (float)
-            valor = col3.number_input("Valor da Mensalidade (R$)", min_value=0.0, step=1.0, format="%.2f")
+            col3, col4 = col1, col2 = st.columns(2)
+            # number_input garante que o valor seja numérico para o cálculo no dashboard
+            valor = col3.number_input("Valor da Mensalidade", min_value=0.0, step=10.0, format="%.2f")
             vencimento = col4.date_input("Data de Vencimento")
             
             submit = st.form_submit_button("Salvar Cliente")
             
             if submit:
                 if nome and whatsapp:
-                    # Preparando os dados com conversão explícita
                     novo_cliente = {
                         "nome": nome,
                         "whatsapp": whatsapp,
@@ -46,24 +45,30 @@ def show(supabase):
     # --- LISTAGEM DE CLIENTES ---
     st.subheader("Lista de Clientes")
     try:
-        # Busca todos os dados da tabela
+        # Busca os dados ordenados por nome
         response = supabase.table("clientes").select("*").order("nome").execute()
         dados = response.data
 
         if dados:
             df = pd.DataFrame(dados)
             
-            # Seleção de colunas existentes para exibição limpa
-            cols_exibicao = ['nome', 'whatsapp', 'valor_mensalidade', 'vencimento', 'status']
-            cols_presentes = [c for c in cols_exibicao if c in df.columns]
+            # Define as colunas que devem aparecer na tabela
+            colunas_exibicao = ["nome", "whatsapp", "valor_mensalidade", "vencimento", "status"]
+            # Filtra apenas as colunas que realmente existem no banco para evitar erro de index
+            colunas_disponiveis = [c for c in colunas_exibicao if c in df.columns]
             
-            # Formatação visual da tabela
-            st.dataframe(
-                df[cols_presentes].style.format({"valor_mensalidade": "R$ {:.2f}"}),
-                use_container_width=True
-            )
+            if colunas_disponiveis:
+                st.dataframe(
+                    df[colunas_disponiveis],
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.error("As colunas esperadas não foram encontradas no banco de dados.")
         else:
-            st.info("Ainda não há clientes cadastrados no banco.")
+            st.info("Nenhum cliente cadastrado ainda.")
             
     except Exception as e:
-        st.error(f"Erro ao carregar lista de clientes: {e}")
+        # Resolve o erro de "not in index" verificando a existência das colunas
+        st.error(f"Erro ao carregar lista: {e}")
+        
