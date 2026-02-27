@@ -71,4 +71,3 @@ def show(supabase):
     except Exception as e:
         # Resolve o erro de "not in index" verificando a existência das colunas
         st.error(f"Erro ao carregar lista: {e}")
-        
