@@ -1,14 +1,20 @@
 from core.database import get_supabase
 
 def executar_cobranca():
-    print("Conectando ao Supabase...")
+    print("==========================================")
+    print("CONECTANDO AO SUPABASE")
+    print("==========================================")
 
     supabase = get_supabase()
 
-    print("Buscando clientes...")
+    print("Conexão estabelecida.")
+    print("Buscando clientes na tabela 'clientes'...")
 
     resposta = supabase.table("clientes").select("*").execute()
 
     total = len(resposta.data)
 
     print(f"Total de clientes encontrados: {total}")
+    print("==========================================")
+    print("TESTE FINALIZADO COM SUCESSO")
+    print("==========================================")
