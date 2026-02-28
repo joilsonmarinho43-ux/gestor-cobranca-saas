@@ -1,28 +1,58 @@
 import sys
 import os
+from datetime import datetime
 
-# Garante que o diretório raiz do projeto seja reconhecido
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-try:
-    print("==========================================")
-    print("INICIANDO EXECUÇÃO DO ROBÔ DE COBRANÇA")
-    print("==========================================")
+# ================================
+# GARANTE PATH DO PROJETO
+# ================================
 
-    from services.robo_cobranca import executar_cobranca
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    print("Importação realizada com sucesso.")
-    print("Executando robô...")
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
 
-    executar_cobranca()
 
-    print("==========================================")
-    print("ROBÔ EXECUTADO COM SUCESSO")
-    print("==========================================")
+# ================================
+# VALIDA VARIÁVEIS DE AMBIENTE
+# ================================
 
-except Exception as e:
-    print("==========================================")
-    print("ERRO DURANTE EXECUÇÃO:")
-    print(str(e))
-    print("==========================================")
-    raise e
+def validar_ambiente():
+    if not os.getenv("SUPABASE_URL"):
+        raise Exception("SUPABASE_URL não configurada.")
+
+    if not os.getenv("SUPABASE_KEY"):
+        raise Exception("SUPABASE_KEY não configurada.")
+
+
+# ================================
+# EXECUÇÃO
+# ================================
+
+if __name__ == "__main__":
+
+    try:
+
+        print("==========================================")
+        print("ROBÔ DE COBRANÇA - INÍCIO")
+        print(f"Data/Hora: {datetime.now()}")
+        print("==========================================")
+
+        validar_ambiente()
+
+        from services.robo_cobranca import executar_cobranca
+
+        executar_cobranca()
+
+        print("==========================================")
+        print("ROBÔ FINALIZADO COM SUCESSO")
+        print("==========================================")
+
+    except Exception as e:
+
+        print("==========================================")
+        print("ERRO NA EXECUÇÃO DO ROBÔ")
+        print(str(e))
+        print("==========================================")
+
+        raise e
