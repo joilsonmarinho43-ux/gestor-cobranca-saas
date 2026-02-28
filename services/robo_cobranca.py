@@ -1,4 +1,6 @@
+from datetime import date
 from core.database import get_supabase
+
 
 def executar_cobranca():
     print("==========================================")
@@ -6,15 +8,34 @@ def executar_cobranca():
     print("==========================================")
 
     supabase = get_supabase()
-
     print("Conexão estabelecida.")
-    print("Buscando clientes na tabela 'clientes'...")
 
-    resposta = supabase.table("clientes").select("*").execute()
+    hoje = date.today()
 
-    total = len(resposta.data)
+    print("Buscando clientes...")
+    
+    response = supabase.table("clientes").select("*").execute()
+    clientes = response.data
 
-    print(f"Total de clientes encontrados: {total}")
+    print(f"Total de clientes encontrados: {len(clientes)}")
+
+    atualizados = 0
+
+    for cliente in clientes:
+        if cliente["status"] != "pago" and cliente["data_vencimento"]:
+            
+            data_vencimento = date.fromisoformat(cliente["data_vencimento"])
+
+            if data_vencimento < hoje:
+                
+                supabase.table("clientes") \
+                    .update({"status": "vencido"}) \
+                    .eq("id", cliente["id"]) \
+                    .execute()
+
+                print(f"Cliente {cliente['nome']} atualizado para VENCIDO.")
+                atualizados += 1
+
     print("==========================================")
-    print("TESTE FINALIZADO COM SUCESSO")
+    print(f"Total de clientes atualizados: {atualizados}")
     print("==========================================")
