@@ -1,79 +1,76 @@
 import streamlit as st
 import os
-from datetime import datetime
+from services.clientes_service import ClientesService
+from modules.modules.dashboard import render_dashboard
 
-# Importações internas baseadas na estrutura de pastas da imagem
-from core.database import Database
-from services.cliente_service import ClienteService
-from modules.dashboard import render_dashboard
+# Configuração de Página Nível SaaS
+st.set_page_config(
+    page_title="Sol da Vida | Enterprise ERP",
+    page_icon="☀️",
+    layout="wide"
+)
 
-def apply_enterprise_theme():
-    """Configuração de página e tema visual."""
-    st.set_page_config(
-        page_title="Sol da Vida | Enterprise ERP",
-        page_icon="☀️",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    # CSS Profissional (Assets)
-    st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-            html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-            .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #f0f2f6; }
-            [data-testid="stSidebar"] { background-color: #f8f9fa; }
-        </style>
-    """, unsafe_allow_html=True)
+# Carregamento de CSS Profissional (Pasta Assets)
+def load_styles():
+    css_path = "assets/style.css"
+    if os.path.exists(css_path):
+        with open(css_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 def main():
-    apply_enterprise_theme()
+    load_styles()
     
-    # Inicialização do Serviço (Camada Services)
-    service = ClienteService()
+    # Contexto do Usuário (ID da Empresa)
+    # Em produção, este valor viria do auth.py
+    EMPRESA_ID = "001" 
+    
+    try:
+        service = ClientesService()
+    except Exception as e:
+        st.error(f"Erro ao inicializar serviços: {e}")
+        return
 
-    # Sidebar
+    # Sidebar Profissional
     with st.sidebar:
-        # Verificação de logo na pasta assets
-        logo_path = "assets/logo.png"
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=160)
+        logo = "assets/logo.png"
+        if os.path.exists(logo):
+            st.image(logo, width=150)
         else:
             st.title("☀️ Sol da Vida")
             
-        st.markdown("---")
-        
-        # Menu de Navegação
-        menu = st.radio(
-            "Navegação Principal",
-            ["📊 Dashboard", "👥 Clientes", "💰 Financeiro", "📈 Relatórios"],
-            label_visibility="collapsed"
-        )
-        
-        # Correção do Erro: Substituindo st.v_spacer por st.container ou markdown
-        st.markdown("<br>" * 5, unsafe_allow_html=True) 
-        
         st.divider()
-        st.caption(f"v2.1.0-stable\n\n© {datetime.now().year} Enterprise Solutions")
-
-    # Roteamento de Módulos (Camada Modules)
-    if "Dashboard" in menu:
-        render_dashboard(service)
+        menu = st.radio("Navegação", ["Dashboard", "Clientes", "Financeiro"])
         
-    elif "Clientes" in menu:
-        st.header("Gestão de Clientes")
-        data = service.list_clients()
-        if data.data:
-            import pandas as pd
-            df = pd.DataFrame(data.data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+        # Espaçamento para o rodapé
+        st.markdown("<br>" * 10, unsafe_allow_html=True)
+        st.caption("v2.1.0-stable | Licença Enterprise")
+
+    # Navegação por Módulos
+    if menu == "Dashboard":
+        render_dashboard(service, EMPRESA_ID)
+        
+    elif menu == "Clientes":
+        st.header("👥 Gestão de Clientes")
+        
+        with st.expander("➕ Cadastrar Novo Cliente"):
+            nome = st.text_input("Nome Completo")
+            if st.button("Salvar Registro", type="primary"):
+                if nome:
+                    service.criar_cliente(EMPRESA_ID, nome)
+                    st.success("Cliente cadastrado com sucesso!")
+                    st.rerun()
+
+        st.divider()
+        clientes = service.listar_por_empresa(EMPRESA_ID)
+        if clientes:
+            st.dataframe(clientes, use_container_width=True)
         else:
             st.info("Nenhum cliente encontrado na base.")
 
-    elif "Financeiro" in menu:
-        st.header("Controle Financeiro")
-        st.info("Módulo em integração com a pasta 'jobs'.")
+    elif menu == "Financeiro":
+        st.header("💰 Controle Financeiro")
+        st.info("Módulo em integração com a camada de serviços.")
 
 if __name__ == "__main__":
     main()
-    
+        
