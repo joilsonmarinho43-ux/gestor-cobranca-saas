@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import pandas as pd
+from PIL import Image
 
 from core.database import get_supabase
 
@@ -64,7 +65,6 @@ try:
 except:
     dashboard_analitico = None
 
-
 # ================================
 # CSS
 # ================================
@@ -81,11 +81,21 @@ if os.path.exists(style_path):
 
 with st.sidebar:
 
-    logo_path = os.path.join(BASE_DIR, "assets", "logo.png")
+    assets_path = os.path.join(BASE_DIR, "assets")
+    logo_encontrada = False
 
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=150)
-    else:
+    if os.path.exists(assets_path):
+        for arquivo in os.listdir(assets_path):
+            if arquivo.lower().endswith((".png", ".jpg", ".jpeg")):
+                try:
+                    img = Image.open(os.path.join(assets_path, arquivo))
+                    st.image(img, width=150)
+                    logo_encontrada = True
+                    break
+                except:
+                    pass
+
+    if not logo_encontrada:
         st.title("☀️ Sol da Vida")
 
     st.markdown("---")
@@ -114,7 +124,6 @@ if menu == "Dashboard":
     total_pendente = 0
 
     try:
-
         clientes = supabase.table("clientes").select("*").execute()
 
         if clientes.data:
@@ -124,12 +133,10 @@ if menu == "Dashboard":
                 float(c.get("valor_mensal", 0) or 0)
                 for c in clientes.data
             )
-
     except:
         pass
 
     try:
-
         cobrancas = (
             supabase
             .table("parcelas")
@@ -139,12 +146,10 @@ if menu == "Dashboard":
         )
 
         if cobrancas.data:
-
             total_pendente = sum(
                 float(c.get("valor", 0) or 0)
                 for c in cobrancas.data
             )
-
     except:
         pass
 
