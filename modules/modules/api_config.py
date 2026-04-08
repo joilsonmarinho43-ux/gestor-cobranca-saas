@@ -1,10 +1,15 @@
 import streamlit as st
+import requests
+import base64
 
 def tela_conexao_whatsapp(supabase, user_id):
-    st.subheader("🔗 Conexão com WhatsApp")
-    st.write("Conecte seu WhatsApp para habilitar os envios automáticos.")
+    st.subheader("🔗 Conexão com WhatsApp (Real)")
+    
+    # Configurações vindas da sua VPS Contabo
+    API_URL = "http://api.funecob.com.br:8080"
+    API_KEY = "123456"
+    INSTANCE_NAME = f"funecob_{user_id[:5]}" # Cria uma instância única por usuário
 
-    # Simulação de status de conexão
     if 'whatsapp_conectado' not in st.session_state:
         st.session_state.whatsapp_conectado = False
 
@@ -15,27 +20,55 @@ def tela_conexao_whatsapp(supabase, user_id):
             st.markdown("### Status da Instância")
             if st.session_state.whatsapp_conectado:
                 st.success("✅ CONECTADO")
-                st.button("Desconectar WhatsApp", type="primary")
+                if st.button("Desconectar WhatsApp", type="primary"):
+                    # Lógica para deletar instância se necessário
+                    st.session_state.whatsapp_conectado = False
+                    st.rerun()
             else:
                 st.warning("⚠️ DESCONECTADO")
-                st.info("Para vender este serviço, você integrará aqui o QR Code da API (Evolution ou Z-API).")
-                
-                if st.button("Gerar QR Code"):
+                if st.button("Gerar QR Code Real"):
                     st.session_state.gerar_qr = True
 
     with col2:
         if 'gerar_qr' in st.session_state and st.session_state.gerar_qr:
             with st.container(border=True):
                 st.markdown("### Escaneie o QR Code")
-                # Placeholder para o QR Code real da API
-                st.image("https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg", width=200)
-                st.caption("Abra o WhatsApp > Aparelhos conectados > Conectar um aparelho")
-                if st.button("Já escaneei"):
-                    st.session_state.whatsapp_conectado = True
+                
+                # CHAMADA REAL PARA A EVOLUTION API
+                try:
+                    # 1. Criar a instância primeiro (ou verificar se existe)
+                    check_url = f"{API_URL}/instance/fetchInstances"
+                    headers = {"apikey": API_KEY}
+                    
+                    # 2. Buscar o QR Code
+                    connect_url = f"{API_URL}/instance/connect/{INSTANCE_NAME}"
+                    response = requests.get(connect_url, headers=headers)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        # A Evolution retorna o base64 do QR Code
+                        qr_base64 = data.get('base64') 
+                        if qr_base64:
+                            # Remove o cabeçalho do base64 se vier junto
+                            if "," in qr_base64:
+                                qr_base64 = qr_base64.split(",")[1]
+                            
+                            st.image(base64.b64decode(qr_base64), width=250)
+                            st.caption("Aguardando leitura...")
+                        else:
+                            st.error("Instância já conectada ou aguardando.")
+                    else:
+                        st.error(f"Erro na API: {response.status_code}")
+                        
+                except Exception as e:
+                    st.error(f"Não foi possível conectar à VPS: {e}")
+
+                if st.button("Verificar Conexão"):
+                    # Aqui você checa se o status mudou para 'open'
                     st.rerun()
 
     st.divider()
-    st.subheader("🔑 Credenciais da API")
-    st.text_input("URL da API (Gateway)", placeholder="https://sua-api.com")
-    st.text_input("Token de Segurança", type="password")
-  
+    with st.expander("🔑 Configurações Técnicas (Contabo)"):
+        st.info(f"Conectado em: {API_URL}")
+        st.text_input("Instância Atual", value=INSTANCE_NAME, disabled=True)
+                            
