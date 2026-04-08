@@ -1,14 +1,17 @@
 import streamlit as st
 import requests
 import base64
+import time
 
 def tela_conexao_whatsapp(supabase, user_id):
-    st.subheader("🔗 Conexão com WhatsApp (Real)")
-    
-    # Configurações vindas da sua VPS Contabo
-    API_URL = "http://api.funecob.com.br:8080"
+    st.subheader("🔗 Conexão com WhatsApp")
+    st.write("Conecte seu WhatsApp para habilitar os envios automáticos do Funecob.")
+
+    # Configurações Reais da sua VPS Contabo
+    API_URL = "http://161.97.181.130:8080"
     API_KEY = "123456"
-    INSTANCE_NAME = f"funecob_{user_id[:5]}" # Cria uma instância única por usuário
+    # Criando um nome de instância único baseado no seu ID de usuário
+    INSTANCE_NAME = f"funecob_{user_id[:8]}" 
 
     if 'whatsapp_conectado' not in st.session_state:
         st.session_state.whatsapp_conectado = False
@@ -21,11 +24,12 @@ def tela_conexao_whatsapp(supabase, user_id):
             if st.session_state.whatsapp_conectado:
                 st.success("✅ CONECTADO")
                 if st.button("Desconectar WhatsApp", type="primary"):
-                    # Lógica para deletar instância se necessário
                     st.session_state.whatsapp_conectado = False
                     st.rerun()
             else:
                 st.warning("⚠️ DESCONECTADO")
+                st.info("Clique no botão abaixo para gerar o código de conexão.")
+                
                 if st.button("Gerar QR Code Real"):
                     st.session_state.gerar_qr = True
 
@@ -34,41 +38,39 @@ def tela_conexao_whatsapp(supabase, user_id):
             with st.container(border=True):
                 st.markdown("### Escaneie o QR Code")
                 
-                # CHAMADA REAL PARA A EVOLUTION API
                 try:
-                    # 1. Criar a instância primeiro (ou verificar se existe)
-                    check_url = f"{API_URL}/instance/fetchInstances"
+                    # Endpoint da Evolution API para conectar instância
+                    connect_url = f"{API_URL}/instance/connect/{INSTANCE_NAME}"
                     headers = {"apikey": API_KEY}
                     
-                    # 2. Buscar o QR Code
-                    connect_url = f"{API_URL}/instance/connect/{INSTANCE_NAME}"
-                    response = requests.get(connect_url, headers=headers)
+                    response = requests.get(connect_url, headers=headers, timeout=10)
                     
-                    if response.status_code == 200:
+                    if response.status_code == 200 or response.status_code == 201:
                         data = response.json()
-                        # A Evolution retorna o base64 do QR Code
-                        qr_base64 = data.get('base64') 
+                        # Pega o base64 (imagem) retornado pela API
+                        qr_base64 = data.get('base64') or data.get('code')
+                        
                         if qr_base64:
-                            # Remove o cabeçalho do base64 se vier junto
-                            if "," in qr_base64:
+                            # Limpeza de cabeçalho base64 se existir
+                            if "," in str(qr_base64):
                                 qr_base64 = qr_base64.split(",")[1]
                             
-                            st.image(base64.b64decode(qr_base64), width=250)
-                            st.caption("Aguardando leitura...")
+                            img_data = base64.b64decode(qr_base64)
+                            st.image(img_data, width=250)
+                            st.caption("Abra o WhatsApp > Aparelhos conectados > Conectar um aparelho")
                         else:
-                            st.error("Instância já conectada ou aguardando.")
+                            st.info("Aguardando o servidor gerar a imagem... Tente novamente.")
                     else:
-                        st.error(f"Erro na API: {response.status_code}")
+                        st.error(f"Erro {response.status_code}: Verifique se a instância '{INSTANCE_NAME}' já existe.")
                         
                 except Exception as e:
-                    st.error(f"Não foi possível conectar à VPS: {e}")
+                    st.error(f"Erro de conexão: Não foi possível alcançar a VPS no IP 161.97.181.130")
+                    st.info("Dica: Verifique se a porta 8080 está aberta no firewall da Contabo.")
 
-                if st.button("Verificar Conexão"):
-                    # Aqui você checa se o status mudou para 'open'
+                if st.button("Atualizar Status"):
                     st.rerun()
 
     st.divider()
-    with st.expander("🔑 Configurações Técnicas (Contabo)"):
-        st.info(f"Conectado em: {API_URL}")
-        st.text_input("Instância Atual", value=INSTANCE_NAME, disabled=True)
-                            
+    with st.expander("🛠️ Dados de Conexão Técnica"):
+        st.code(f"Host: {API_URL}\nInstância: {INSTANCE_NAME}")
+                    
